@@ -44,24 +44,32 @@ On macOS, produce the base64 value with
 `base64 -i habitcounter-release.jks | tr -d '\n'`. Store it directly in GitHub
 Secrets; do not put it in the repository or `.env`.
 
-The existing `v1.0.0-rc1` tag is already pushed. After pushing the workflow
-changes on `main`, run the workflow manually to build that existing tag:
+The tag selected by the workflow must contain the complete build configuration,
+including dependency verification checksums. The workflow file itself can come
+from `main`, but Gradle builds the source checked out at the selected tag.
+Therefore, if build configuration changes after a tag is created, make a new
+tag; do not move an existing published tag.
 
-1. Create a persistent release keystore and store a secure offline backup.
-2. Add the four `ANDROID_RELEASE_*` repository Actions secrets listed above.
-3. Commit and push the release workflow changes to `main`.
-4. In GitHub, open **Actions > Release > Run workflow**. Select `main` as the
-   branch and enter `v1.0.0-rc1` in the tag input.
-5. Start the workflow. It checks out the tag, builds and compares two unsigned
-   APKs, signs the verified APK, and creates the GitHub prerelease with
-   `HabitCounter-1.0.0-rc1.apk` attached.
-6. Confirm the workflow succeeds and the APK is listed under **Releases**.
+For the current release, `v1.0.0-rc1` predates the dependency verification
+checksums and cannot build with verification enabled. After the checksum fix
+is on `main`, create a new candidate tag from that commit:
 
-Do not push or move `v1.0.0-rc1` again; it already exists on the remote. Future
-tags trigger automatically. To publish the stable release, push a clean
-`v1.0.0` tag after the release workflow changes are on `main`; it creates a
-non-prerelease titled `HabitCounter 1.0.0` with `HabitCounter-1.0.0.apk`.
-No release is published unless all four signing secrets are present.
+```sh
+git switch main
+git pull --ff-only
+git tag v1.0.0-rc3
+git push origin v1.0.0-rc3
+```
+
+Pushing the new tag starts the release workflow automatically. It builds and
+compares two unsigned APKs, signs the verified APK, and creates the GitHub
+prerelease `HabitCounter-1.0.0-rc3.apk`. Confirm the workflow succeeds and the
+APK is listed under **Releases**. Keep `v1.0.0-rc1` unchanged.
+
+Future tags also trigger automatically. To publish the stable release, push a
+clean `v1.0.0` tag from the approved release commit; it creates a
+non-prerelease titled `HabitCounter 1.0.0` with `HabitCounter-1.0.0.apk`. No
+release is published unless all four signing secrets are present.
 
 ## F-Droid
 
