@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing pushed version tag to release (for example v1.0.0-rc1)
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -13,22 +19,23 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Check out tagged source
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
           fetch-depth: 0
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           distribution: temurin
           java-version: "21"
           cache: gradle
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
 
       - name: Validate Gradle wrapper
-        uses: gradle/actions/wrapper-validation@v4
+        uses: gradle/actions/wrapper-validation@b9bee63ef481cc545e4517ec730544a4d8b1dfa0 # v6.4.0
 
       - name: Install pinned Android SDK packages
         run: sdkmanager --install "platforms;android-37" "build-tools;36.0.0"
@@ -36,29 +43,52 @@ jobs:
       - name: Validate tag and derive Android version
         id: version
         shell: bash
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
         run: |
-          if [[ ! "$GITHUB_REF_NAME" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
-            echo "Release tags must use vMAJOR.MINOR.PATCH (for example v1.0.0)." >&2
+          tag_name="${INPUT_TAG:-$GITHUB_REF_NAME}"
+          if [[ ! "$tag_name" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-rc([1-9][0-9]*))?$ ]]; then
+            echo "Release tags must use vMAJOR.MINOR.PATCH or vMAJOR.MINOR.PATCH-rcN." >&2
             exit 1
           fi
 
           major="${BASH_REMATCH[1]}"
           minor="${BASH_REMATCH[2]}"
           patch="${BASH_REMATCH[3]}"
-          if (( minor > 999 || patch > 999 )); then
-            echo "MINOR and PATCH must be less than 1000 for the version-code scheme." >&2
+          prerelease="${BASH_REMATCH[4]}"
+          rc_number="${BASH_REMATCH[5]}"
+          if (( ${#major} > 3 || ${#minor} > 2 || ${#patch} > 2 || ${#rc_number} > 3 )); then
+            echo "Version components exceed the supported version-code scheme." >&2
+            exit 1
+          fi
+          if (( minor > 99 || patch > 99 )); then
+            echo "MINOR and PATCH must each be less than 100." >&2
             exit 1
           fi
 
-          version_name="${major}.${minor}.${patch}"
-          version_code=$((major * 1000000 + minor * 1000 + patch))
+          if [[ -n "$rc_number" ]]; then
+            if (( rc_number > 998 )); then
+              echo "RC number must be between 1 and 998." >&2
+              exit 1
+            fi
+            version_suffix="$rc_number"
+            is_prerelease=true
+          else
+            version_suffix=999
+            is_prerelease=false
+          fi
+
+          version_name="${major}.${minor}.${patch}${prerelease}"
+          version_code=$((major * 10000000 + minor * 100000 + patch * 1000 + version_suffix))
           if (( version_code > 2100000000 )); then
             echo "Derived Android versionCode exceeds the supported limit." >&2
             exit 1
           fi
 
+          echo "tag_name=$tag_name" >> "$GITHUB_OUTPUT"
           echo "version_name=$version_name" >> "$GITHUB_OUTPUT"
           echo "version_code=$version_code" >> "$GITHUB_OUTPUT"
+          echo "is_prerelease=$is_prerelease" >> "$GITHUB_OUTPUT"
 
       - name: Load release signing key
         env:
@@ -120,5 +150,15 @@ jobs:
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ steps.version.outputs.tag_name }}
           VERSION_NAME: ${{ steps.version.outputs.version_name }}
-        run: gh release create "$GITHUB_REF_NAME" "$RELEASE_APK" --title "HabitCounter $VERSION_NAME" --generate-notes
+          IS_PRERELEASE: ${{ steps.version.outputs.is_prerelease }}
+        run: |
+          release_flags=()
+          if [[ "$IS_PRERELEASE" == "true" ]]; then
+            release_flags+=(--prerelease)
+          fi
+          gh release create "$TAG_NAME" "$RELEASE_APK" \
+            --title "HabitCounter $VERSION_NAME" \
+            --generate-notes \
+            "${release_flags[@]}"

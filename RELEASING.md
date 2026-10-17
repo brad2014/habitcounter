@@ -3,10 +3,14 @@
 ## Versioning
 
 Create releases from clean commits with tags in `vMAJOR.MINOR.PATCH` form, such
-as `v1.0.0`. The GitHub Actions workflow rejects other tag formats. Android
-`versionName` is the tag without its leading `v`. The `versionCode` is
-`MAJOR * 1,000,000 + MINOR * 1,000 + PATCH`; `MINOR` and `PATCH` must each be
-less than 1000. This produces version code `1000000` for `1.0.0`.
+as `v1.0.0`. Release candidates may use `vMAJOR.MINOR.PATCH-rcN`, such as
+`v1.0.0-rc1`. Android `versionName` is the tag without its leading `v`.
+
+The `versionCode` base is `MAJOR * 10,000,000 + MINOR * 100,000 + PATCH *
+1,000`. An RC adds its RC number (1-998); a stable release adds 999. `MINOR`
+and `PATCH` must each be below 100, and the result must not exceed Android's
+2,100,000,000 limit. This gives `1.0.0-rc1` versionCode `10000001` and final
+`1.0.0` versionCode `10000999`, so the stable APK updates an installed RC.
 
 The workflow builds the unsigned release APK twice from the tagged commit and
 requires byte-for-byte equality before signing. It then creates a signed APK
@@ -40,9 +44,24 @@ On macOS, produce the base64 value with
 `base64 -i habitcounter-release.jks | tr -d '\n'`. Store it directly in GitHub
 Secrets; do not put it in the repository or `.env`.
 
-After pushing a clean commit and its tag, for example `v1.0.0`, the workflow
-builds, compares, signs, and attaches `HabitCounter-1.0.0.apk` to the GitHub
-Release. No release is published unless all four signing secrets are present.
+The existing `v1.0.0-rc1` tag is already pushed. After pushing the workflow
+changes on `main`, run the workflow manually to build that existing tag:
+
+1. Create a persistent release keystore and store a secure offline backup.
+2. Add the four `ANDROID_RELEASE_*` repository Actions secrets listed above.
+3. Commit and push the release workflow changes to `main`.
+4. In GitHub, open **Actions > Release > Run workflow**. Select `main` as the
+   branch and enter `v1.0.0-rc1` in the tag input.
+5. Start the workflow. It checks out the tag, builds and compares two unsigned
+   APKs, signs the verified APK, and creates the GitHub prerelease with
+   `HabitCounter-1.0.0-rc1.apk` attached.
+6. Confirm the workflow succeeds and the APK is listed under **Releases**.
+
+Do not push or move `v1.0.0-rc1` again; it already exists on the remote. Future
+tags trigger automatically. To publish the stable release, push a clean
+`v1.0.0` tag after the release workflow changes are on `main`; it creates a
+non-prerelease titled `HabitCounter 1.0.0` with `HabitCounter-1.0.0.apk`.
+No release is published unless all four signing secrets are present.
 
 ## F-Droid
 
@@ -71,7 +90,7 @@ are pinned in the Gradle configuration.
 ```sh
 ./gradlew --no-daemon --max-workers=1 clean :app:assembleRelease \
   -PreleaseVersionName=1.0.0 \
-  -PreleaseVersionCode=1000000
+  -PreleaseVersionCode=10000999
 ```
 
 The resulting APK is unsigned at

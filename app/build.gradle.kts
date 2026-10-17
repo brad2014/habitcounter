@@ -10,7 +10,7 @@ dependencyLocking {
 }
 
 val releaseVersionName = providers.gradleProperty("releaseVersionName").getOrElse("1.0.0")
-val releaseVersionCode = providers.gradleProperty("releaseVersionCode").map { it.toInt() }.getOrElse(1_000_000)
+val releaseVersionCode = providers.gradleProperty("releaseVersionCode").map { it.toInt() }.getOrElse(10_000_999)
 
 android {
     namespace = "tech.wbr.habitcounter"

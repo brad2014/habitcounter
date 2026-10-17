@@ -11,14 +11,14 @@ Description: |-
   .
   The app works offline and stores counter data locally on the device.
 RepoType: git
-Repo: https://github.com/OWNER/REPOSITORY
+Repo: https://github.com/brad2014/habitcounter
 UpdateCheckMode: Static
 CurrentVersion: 1.0.0
-CurrentVersionCode: 1000000
+CurrentVersionCode: 10000999
 Builds:
   - versionName: 1.0.0
-    versionCode: 1000000
+    versionCode: 10000999
     commit: REPLACE_WITH_FULL_V1_0_0_COMMIT_SHA
     subdir: .
     gradle: yes
-    gradleprops: releaseVersionName=1.0.0,releaseVersionCode=1000000
+    gradleprops: releaseVersionName=1.0.0,releaseVersionCode=10000999
