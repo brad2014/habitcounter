@@ -29,21 +29,30 @@ data class PeriodStarts(
     val month: Instant,
     val day: Instant,
     val hour: Instant,
-    val endExclusive: Instant,
+    val monthEndExclusive: Instant,
+    val dayEndExclusive: Instant,
+    val hourEndExclusive: Instant,
 )
 
 fun periodStarts(now: Instant, zone: ZoneId): PeriodStarts {
     val localNow = now.atZone(zone)
     val today = localNow.toLocalDate()
-    val monthStart = YearMonth.from(localNow).atDay(1).atStartOfDay(zone).toInstant()
+    val currentMonth = YearMonth.from(localNow)
+    val monthStart = currentMonth.atDay(1).atStartOfDay(zone).toInstant()
+    val monthEnd = currentMonth.plusMonths(1).atDay(1).atStartOfDay(zone).toInstant()
     val dayStart = today.atStartOfDay(zone).toInstant()
-    val hourStart = localNow.truncatedTo(ChronoUnit.HOURS).toInstant()
+    val dayEnd = today.plusDays(1).atStartOfDay(zone).toInstant()
+    val currentHour = localNow.truncatedTo(ChronoUnit.HOURS)
+    val hourStart = currentHour.toInstant()
+    val hourEnd = currentHour.plusHours(1).toInstant()
 
     return PeriodStarts(
         month = monthStart,
         day = dayStart,
         hour = hourStart,
-        endExclusive = now.plusMillis(1),
+        monthEndExclusive = monthEnd,
+        dayEndExclusive = dayEnd,
+        hourEndExclusive = hourEnd,
     )
 }
 

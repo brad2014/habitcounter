@@ -7,6 +7,7 @@ import android.content.pm.ShortcutManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.Typeface
 import android.graphics.drawable.Icon
 import androidx.core.graphics.createBitmap
 
@@ -64,10 +65,10 @@ object CounterShortcutManager {
         paint.color = color
         canvas.drawCircle(size / 2f, size / 2f, size * 0.46f, paint)
         paint.color = android.graphics.Color.WHITE
-        paint.strokeWidth = 10f
-        paint.strokeCap = Paint.Cap.ROUND
-        canvas.drawLine(40f, 64f, 88f, 64f, paint)
-        canvas.drawLine(64f, 40f, 64f, 88f, paint)
+        paint.textSize = 54f
+        paint.typeface = Typeface.create("sans-serif", Typeface.BOLD)
+        paint.textAlign = Paint.Align.CENTER
+        canvas.drawText("+1", size / 2f, 82f, paint)
         return bitmap
     }
 }

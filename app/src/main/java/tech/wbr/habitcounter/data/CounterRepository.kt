@@ -34,12 +34,11 @@ class CounterRepository(
 
     fun observeSummaries(): Flow<List<CounterSummary>> = nowFlow.flatMapLatest { now ->
         val starts = periodStarts(now, zone)
-        val endMillis = starts.endExclusive.toEpochMilli()
         combine(
             dao.observeCounters(),
-            dao.observeCounts(starts.month.toEpochMilli(), endMillis),
-            dao.observeCounts(starts.day.toEpochMilli(), endMillis),
-            dao.observeCounts(starts.hour.toEpochMilli(), endMillis),
+            dao.observeCounts(starts.month.toEpochMilli(), starts.monthEndExclusive.toEpochMilli()),
+            dao.observeCounts(starts.day.toEpochMilli(), starts.dayEndExclusive.toEpochMilli()),
+            dao.observeCounts(starts.hour.toEpochMilli(), starts.hourEndExclusive.toEpochMilli()),
         ) { counters, monthCounts, dayCounts, hourCounts ->
             val months = monthCounts.associate { it.counterId to it.count }
             val days = dayCounts.associate { it.counterId to it.count }

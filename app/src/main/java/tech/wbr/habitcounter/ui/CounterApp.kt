@@ -1,6 +1,9 @@
 package tech.wbr.habitcounter.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -14,12 +17,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
+import tech.wbr.habitcounter.BuildConfig
 import tech.wbr.habitcounter.data.ChartInterval
 import tech.wbr.habitcounter.data.CounterRecord
 
 private sealed interface AppRoute {
     data object Home : AppRoute
+    data object About : AppRoute
     data class Edit(val counterId: Long) : AppRoute
     data class Graph(val counterId: Long, val interval: ChartInterval) : AppRoute
 }
@@ -44,9 +50,11 @@ fun CounterApp(counterViewModel: CounterViewModel = viewModel()) {
 
     MaterialTheme(
         colorScheme = lightColorScheme(
-            primary = Color(0xFF356B5B),
+            primary = Color(0xFF2563EB),
             onPrimary = Color.White,
-            secondary = Color(0xFFB56E43),
+            secondary = Color(0xFFB85158),
+            secondaryContainer = Color(0xFF2563EB),
+            onSecondaryContainer = Color.White,
             background = Color(0xFFF5F6F1),
             surface = Color(0xFFF5F6F1),
             surfaceVariant = Color(0xFFE8EBE4),
@@ -54,7 +62,7 @@ fun CounterApp(counterViewModel: CounterViewModel = viewModel()) {
             onSurfaceVariant = Color(0xFF5E685F),
         ),
     ) {
-        Surface {
+        Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
             when (val current = route) {
                 AppRoute.Home -> HomeScreen(
                     counters = summaries,
@@ -62,6 +70,7 @@ fun CounterApp(counterViewModel: CounterViewModel = viewModel()) {
                         draft = CounterDraft()
                         route = AppRoute.Edit(0)
                     },
+                    onAbout = { route = AppRoute.About },
                     onIncrement = counterViewModel::increment,
                     onEdit = { counter ->
                         draft = CounterDraft.from(counter)
@@ -70,9 +79,15 @@ fun CounterApp(counterViewModel: CounterViewModel = viewModel()) {
                     onGraph = { id, interval -> route = AppRoute.Graph(id, interval) },
                 )
 
+                AppRoute.About -> AboutScreen(
+                    versionName = BuildConfig.VERSION_NAME,
+                    onBack = { route = AppRoute.Home },
+                )
+
                 is AppRoute.Edit -> CounterEditorScreen(
                     draft = draft,
                     isExisting = current.counterId != 0L,
+                    summary = summaries.firstOrNull { it.counter.id == current.counterId },
                     onDraftChange = { draft = it },
                     onBack = {
                         if (draftIsDirty) showUnsavedDialog = true else route = AppRoute.Home
@@ -95,10 +110,6 @@ fun CounterApp(counterViewModel: CounterViewModel = viewModel()) {
                             interval = current.interval,
                             onIntervalChange = { route = current.copy(interval = it) },
                             onBack = { route = AppRoute.Home },
-                            onSettings = {
-                                draft = CounterDraft.from(summary.counter)
-                                route = AppRoute.Edit(summary.counter.id)
-                            },
                             loadEventTimes = counterViewModel::eventTimes,
                         )
                     }
@@ -132,14 +143,13 @@ fun CounterApp(counterViewModel: CounterViewModel = viewModel()) {
     if (showResetDialog) {
         AlertDialog(
             onDismissRequest = { showResetDialog = false },
-            title = { Text("Reset history?") },
+            title = { Text("Reset counter?") },
             text = { Text("This removes every recorded instance for this counter.") },
             confirmButton = {
                 TextButton(onClick = {
                     counterViewModel.reset(draft.id)
                     showResetDialog = false
-                    route = AppRoute.Home
-                }) { Text("Reset counter") }
+                }) { Text("Reset") }
             },
             dismissButton = { TextButton(onClick = { showResetDialog = false }) { Text("Cancel") } },
         )

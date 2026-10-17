@@ -5,24 +5,39 @@ plugins {
     id("androidx.room")
 }
 
+dependencyLocking {
+    lockAllConfigurations()
+}
+
+val releaseVersionName = providers.gradleProperty("releaseVersionName").getOrElse("1.0.0")
+val releaseVersionCode = providers.gradleProperty("releaseVersionCode").map { it.toInt() }.getOrElse(1_000_000)
+
 android {
     namespace = "tech.wbr.habitcounter"
     compileSdk = 37
+    buildToolsVersion = "36.0.0"
 
     defaultConfig {
         applicationId = "tech.wbr.habitcounter"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = releaseVersionCode
+        versionName = releaseVersionName
     }
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     room {
         schemaDirectory("$projectDir/schemas")
+    }
+
+    buildTypes {
+        getByName("release") {
+            vcsInfo.include = false
+        }
     }
 }
 

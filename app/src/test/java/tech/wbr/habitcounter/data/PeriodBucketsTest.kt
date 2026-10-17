@@ -5,6 +5,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PeriodBucketsTest {
@@ -19,7 +20,10 @@ class PeriodBucketsTest {
         assertEquals(Instant.parse("2025-03-01T08:00:00Z"), starts.month)
         assertEquals(Instant.parse("2025-03-09T08:00:00Z"), starts.day)
         assertEquals(Instant.parse("2025-03-09T18:00:00Z"), starts.hour)
-        assertEquals(now.plusMillis(1), starts.endExclusive)
+        assertEquals(Instant.parse("2025-04-01T07:00:00Z"), starts.monthEndExclusive)
+        assertEquals(Instant.parse("2025-03-10T07:00:00Z"), starts.dayEndExclusive)
+        assertEquals(Instant.parse("2025-03-09T19:00:00Z"), starts.hourEndExclusive)
+        assertTrue(now.plusSeconds(30).isBefore(starts.hourEndExclusive))
     }
 
     @Test

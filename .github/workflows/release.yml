@@ -1,0 +1,124 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v4
+
+      - name: Install pinned Android SDK packages
+        run: sdkmanager --install "platforms;android-37" "build-tools;36.0.0"
+
+      - name: Validate tag and derive Android version
+        id: version
+        shell: bash
+        run: |
+          if [[ ! "$GITHUB_REF_NAME" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Release tags must use vMAJOR.MINOR.PATCH (for example v1.0.0)." >&2
+            exit 1
+          fi
+
+          major="${BASH_REMATCH[1]}"
+          minor="${BASH_REMATCH[2]}"
+          patch="${BASH_REMATCH[3]}"
+          if (( minor > 999 || patch > 999 )); then
+            echo "MINOR and PATCH must be less than 1000 for the version-code scheme." >&2
+            exit 1
+          fi
+
+          version_name="${major}.${minor}.${patch}"
+          version_code=$((major * 1000000 + minor * 1000 + patch))
+          if (( version_code > 2100000000 )); then
+            echo "Derived Android versionCode exceeds the supported limit." >&2
+            exit 1
+          fi
+
+          echo "version_name=$version_name" >> "$GITHUB_OUTPUT"
+          echo "version_code=$version_code" >> "$GITHUB_OUTPUT"
+
+      - name: Load release signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_RELEASE_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_RELEASE_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEY_PASSWORD }}
+        run: |
+          if [[ -z "$KEYSTORE_BASE64" || -z "$KEYSTORE_PASSWORD" || -z "$KEY_ALIAS" || -z "$KEY_PASSWORD" ]]; then
+            echo "Configure all ANDROID_RELEASE_* repository secrets before publishing a release." >&2
+            exit 1
+          fi
+
+          keystore="$RUNNER_TEMP/habitcounter-release.jks"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$keystore"
+          chmod 600 "$keystore"
+          echo "ANDROID_RELEASE_KEYSTORE=$keystore" >> "$GITHUB_ENV"
+
+      - name: Build and compare unsigned APKs
+        env:
+          VERSION_NAME: ${{ steps.version.outputs.version_name }}
+          VERSION_CODE: ${{ steps.version.outputs.version_code }}
+        run: |
+          ./gradlew --no-daemon --max-workers=1 clean :app:assembleRelease \
+            "-PreleaseVersionName=$VERSION_NAME" \
+            "-PreleaseVersionCode=$VERSION_CODE"
+
+          unsigned_apk="app/build/outputs/apk/release/app-release-unsigned.apk"
+          cp "$unsigned_apk" "$RUNNER_TEMP/first-build.apk"
+
+          ./gradlew --no-daemon --max-workers=1 clean :app:assembleRelease \
+            "-PreleaseVersionName=$VERSION_NAME" \
+            "-PreleaseVersionCode=$VERSION_CODE"
+          cmp "$RUNNER_TEMP/first-build.apk" "$unsigned_apk"
+
+      - name: Sign verified APK
+        env:
+          VERSION_NAME: ${{ steps.version.outputs.version_name }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_RELEASE_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEY_PASSWORD }}
+        run: |
+          build_tools="$ANDROID_HOME/build-tools/36.0.0"
+          unsigned_apk="app/build/outputs/apk/release/app-release-unsigned.apk"
+          apk="HabitCounter-$VERSION_NAME.apk"
+
+          "$build_tools/zipalign" -c -v 4 "$unsigned_apk"
+          "$build_tools/apksigner" sign \
+            --ks "$ANDROID_RELEASE_KEYSTORE" \
+            --ks-key-alias "$KEY_ALIAS" \
+            --ks-pass env:KEYSTORE_PASSWORD \
+            --key-pass env:KEY_PASSWORD \
+            --out "$apk" \
+            "$unsigned_apk"
+          "$build_tools/apksigner" verify --verbose "$apk"
+
+          echo "RELEASE_APK=$apk" >> "$GITHUB_ENV"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION_NAME: ${{ steps.version.outputs.version_name }}
+        run: gh release create "$GITHUB_REF_NAME" "$RELEASE_APK" --title "HabitCounter $VERSION_NAME" --generate-notes
