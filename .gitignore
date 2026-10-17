@@ -1,7 +1,9 @@
 .env
-.kotlin/
 .gradle/
-**/build/
-local.properties
+.kotlin/
+.vscode
+*.apk
 *.jks
 *.keystore
+**/build/
+local.properties
