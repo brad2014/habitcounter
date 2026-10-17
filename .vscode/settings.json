@@ -1,0 +1,15 @@
+{
+  "java.configuration.updateBuildConfiguration": "disabled",
+  "chat.tools.terminal.autoApprove": {
+    "set": true,
+    "./gradlew": true,
+    "/^set -a && source \\.env && set \\+a && \\./gradlew :app:compileDebugKotlin --console=plain$/": {
+      "approve": true,
+      "matchCommandLine": true
+    },
+    "/^set -a && source \\.env && set \\+a && \\./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug --console=plain$/": {
+      "approve": true,
+      "matchCommandLine": true
+    }
+  }
+}
