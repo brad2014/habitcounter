@@ -71,6 +71,19 @@ clean `v1.0.0` tag from the approved release commit; it creates a
 non-prerelease titled `HabitCounter 1.0.0` with `HabitCounter-1.0.0.apk`. No
 release is published unless all four signing secrets are present.
 
+## Refresh Dependency Verification Metadata
+
+When a trusted dependency or metadata file is missing from
+`gradle/verification-metadata.xml`, run **Actions > Update dependency
+verification metadata > Run workflow** on `main`. The workflow resolves the
+release, KSP, unit-test, and lint configurations on Ubuntu 24.04, then opens a
+pull request containing only the updated verification metadata file.
+
+Review every added or changed checksum and its component before merging. This
+workflow deliberately does not commit directly to `main`. If GitHub blocks the
+pull request step, enable **Settings > Actions > General > Allow GitHub Actions
+to create and approve pull requests** for this repository, then rerun it.
+
 ## F-Droid
 
 F-Droid's official build metadata is maintained in the separate `fdroiddata`
