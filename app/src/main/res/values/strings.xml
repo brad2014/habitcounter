@@ -1,10 +1,4 @@
 <resources>
     <string name="app_name">HabitCounter</string>
-    <string name="counter_widget_description">A quick counter with the past-hour total.</string>
     <string name="counter_default_label">Counter</string>
-    <string name="widget_period_past_hour">PAST HOUR</string>
-    <string name="widget_initial_count">0</string>
-    <string name="widget_increment_label">+1</string>
-    <string name="widget_not_pinned">Counter is not pinned</string>
-    <string name="widget_update_hint">Update it in HabitCounter</string>
 </resources>

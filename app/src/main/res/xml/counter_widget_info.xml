@@ -1,9 +1,0 @@
-<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
-    android:configure="tech.wbr.habitcounter.launcher.CounterWidgetConfigureActivity"
-    android:description="@string/counter_widget_description"
-    android:initialLayout="@layout/counter_widget"
-    android:minHeight="96dp"
-    android:minWidth="180dp"
-    android:resizeMode="horizontal|vertical"
-    android:updatePeriodMillis="0"
-    android:widgetCategory="home_screen" />

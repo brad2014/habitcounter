@@ -11,14 +11,14 @@ import kotlinx.coroutines.launch
 class CounterShortcutActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val counterId = intent.getLongExtra(CounterWidgetProvider.EXTRA_COUNTER_ID, 0L)
+        val counterId = intent.getLongExtra(CounterShortcutManager.EXTRA_COUNTER_ID, 0L)
         lifecycleScope.launch {
             if (counterId > 0L) {
                 getSystemService(ShortcutManager::class.java)?.reportShortcutUsed("counter-$counterId")
                 CounterDatabase.get(this@CounterShortcutActivity).counterDao().insertEvent(
                     CounterEvent(counterId = counterId, occurredAtMillis = System.currentTimeMillis()),
                 )
-                CounterWidgetProvider.refreshCounterWidgets(this@CounterShortcutActivity, counterId)
+                CounterShortcutManager.refresh(this@CounterShortcutActivity, counterId)
             }
             finish()
         }

@@ -14,22 +14,10 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".launcher.CounterWidgetConfigureActivity"
-            android:exported="true" />
-        <activity
             android:name=".launcher.CounterShortcutActivity"
+            android:excludeFromRecents="true"
             android:exported="true"
+            android:taskAffinity=""
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
-        <receiver
-            android:name=".launcher.CounterWidgetProvider"
-            android:exported="true"
-            android:label="HabitCounter">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/counter_widget_info" />
-        </receiver>
     </application>
 </manifest>
